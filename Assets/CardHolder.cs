@@ -1,5 +1,7 @@
-﻿[System.Serializable]
+﻿using System.Collections.Generic;
+
+[System.Serializable]
 public class CardHolder
 {
-	public CardData[] data;
+	public List<CardData> data;
 }

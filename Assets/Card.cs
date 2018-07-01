@@ -10,7 +10,6 @@ public class Card : CastleObject
 	public CardData data;
 	public RectTransform artBacking;
 	public RectTransform leftTabs;
-	public RectTransform rightTabs;
 	public ToggleGroup tabs;
 	public Toggle leftTabObj;
 	public Toggle rightTabObj;
@@ -23,6 +22,7 @@ public class Card : CastleObject
 	public Text nameText;
 	public float backgroundScale, foregroundScale;
 	public bool isHeld;
+	public Button addBackground, addForeground;
 
 	public Button uploadArt;
 
@@ -194,6 +194,10 @@ public class Card : CastleObject
 		}
 		else if(artIndex > 1)
 		{
+			for (int i = 0; i < backgroundLayers.Count; i++)
+			{
+				backgroundLayers[i].gameObject.SetActive(false);
+			}
 			for (int i = 0; i < foregroundLayers.Count; i++)
 			{
 				if(i == (artIndex - 2))
@@ -205,6 +209,7 @@ public class Card : CastleObject
 					foregroundLayers[i].gameObject.SetActive(false);
 				}
 			}
+			art.gameObject.SetActive(false);
 		}
 		else if(artIndex < 0)
 		{
@@ -219,6 +224,11 @@ public class Card : CastleObject
 					backgroundLayers[i].gameObject.SetActive(false);
 				}
 			}
+			for (int i = 0; i < foregroundLayers.Count; i++)
+			{
+				foregroundLayers[i].gameObject.SetActive(false);
+			}
+			art.gameObject.SetActive(false);
 		}
 		uploadArt.gameObject.SetActive(true);
 	}
@@ -229,29 +239,57 @@ public class Card : CastleObject
 		artTab.artIndex = foregroundLayers.Count + 2;
 		artTab.indexText.text = artTab.artIndex.ToString();
 		((RectTransform)artTab.transform).anchoredPosition = Vector2.down * 20 * (foregroundLayers.Count + 1);
-
+		addForeground.image.rectTransform.anchoredPosition = (Vector2.down * 20 * (foregroundLayers.Count + 2)) + (Vector2.left * 10);
 		foregroundLayers.Add(Instantiate(art, maskImage.rectTransform));
-		if(string.IsNullOrEmpty(path))
+		foregroundLayers[foregroundLayers.Count - 1].rectTransform.SetAsLastSibling();
+		if (string.IsNullOrEmpty(path))
 		{
 
 		}
 		else
 		{
-
+			if (!data.foregroundLayers[foregroundLayers.Count - 1].masked)
+			{
+				foregroundLayers[foregroundLayers.Count - 1].maskable = false;
+			}
+			else
+			{
+				foregroundLayers[foregroundLayers.Count - 1].maskable = true;
+			}
+			foregroundLayers[foregroundLayers.Count - 1].texture = CastleTools.LoadImage(Path.Combine(CardLoader.GetSavePath(""), data.foregroundLayers[foregroundLayers.Count - 1].imageDir));
+			foregroundLayers[foregroundLayers.Count - 1].SetNativeSize();
+			foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta = foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta / 2;
+			foregroundLayers[foregroundLayers.Count - 1].transform.position = artBacking.transform.position;
 		}
 	}
 
 	public void AddBackground(string path = "")
 	{
 		ArtTab artTab = Instantiate(leftTabObj,leftTabs).GetComponent<ArtTab>();
-		artTab.artIndex = backgroundLayers.Count - 1;
+		artTab.artIndex = -backgroundLayers.Count - 1;
 		artTab.indexText.text = artTab.artIndex.ToString();
 		((RectTransform)artTab.transform).anchoredPosition = Vector2.up * 20 * (backgroundLayers.Count + 1);
-
+		addBackground.image.rectTransform.anchoredPosition = (Vector2.up * 20 * (backgroundLayers.Count + 1)) + (Vector2.left * 10);
 		backgroundLayers.Add(Instantiate(art,maskImage.rectTransform));
+		backgroundLayers[backgroundLayers.Count - 1].rectTransform.SetAsFirstSibling();
 		if (string.IsNullOrEmpty(path))
 		{
 
+		}
+		else
+		{
+			if (!data.backgroundLayers[backgroundLayers.Count - 1].masked)
+			{
+				backgroundLayers[backgroundLayers.Count - 1].maskable = false;
+			}
+			else
+			{
+				backgroundLayers[backgroundLayers.Count - 1].maskable = true;
+			}
+			backgroundLayers[backgroundLayers.Count - 1].texture = CastleTools.LoadImage(Path.Combine(CardLoader.GetSavePath(""), data.backgroundLayers[backgroundLayers.Count - 1].imageDir));
+			backgroundLayers[backgroundLayers.Count - 1].SetNativeSize();
+			backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta = backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta / 2;
+			backgroundLayers[backgroundLayers.Count - 1].transform.position = artBacking.transform.position;
 		}
 	}
 

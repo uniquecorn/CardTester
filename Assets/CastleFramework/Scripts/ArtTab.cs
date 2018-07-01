@@ -26,11 +26,11 @@ public class ArtTab : MonoBehaviour
 	{
 		if(toggle.isOn)
 		{
-			((RectTransform)toggle.transform).sizeDelta = Vector2.Lerp(((RectTransform)toggle.transform).sizeDelta, Vector2.one * 20, Time.deltaTime * 10);
+			((RectTransform)toggle.transform).sizeDelta = Vector2.Lerp(((RectTransform)toggle.transform).sizeDelta, (Vector2.one * 20) + (Vector2.right * 10), Time.deltaTime * 10);
 		}
 		else
 		{
-			((RectTransform)toggle.transform).sizeDelta = Vector2.Lerp(((RectTransform)toggle.transform).sizeDelta, (Vector2.one * 20) + (Vector2.left * 5), Time.deltaTime * 10);
+			((RectTransform)toggle.transform).sizeDelta = Vector2.Lerp(((RectTransform)toggle.transform).sizeDelta, (Vector2.one * 20) + (Vector2.right * 5), Time.deltaTime * 10);
 		}
 	}
 }

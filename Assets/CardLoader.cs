@@ -8,12 +8,25 @@ public class CardLoader : MonoBehaviour
 	public Card card;
 	public int loadedIndex = 0;
 	public CardHolder loadedData;
+	public static CardLoader instance;
 	// Use this for initialization
 	void Start ()
 	{
+		instance = this;
 		Screen.SetResolution(720, 720, false);
 		Load();
 		card.Load(loadedData.data[loadedIndex]);
+	}
+	public void AddCard()
+	{
+		loadedData.data.Add(new CardData());
+		Save();
+		Load();
+	}
+	public void Save()
+	{
+		string json = JsonUtility.ToJson(loadedData, true);
+		File.WriteAllText(GetSavePath(), json);
 	}
 	public void Load()
 	{
@@ -21,13 +34,12 @@ public class CardLoader : MonoBehaviour
 		{
 			string json = File.ReadAllText(GetSavePath());
 			loadedData = JsonUtility.FromJson<CardHolder>(json);
-			
 		}
 		else
 		{
 			CardHolder tempData = new CardHolder()
 			{
-				data = new CardData[]
+				data = new List<CardData>
 				{
 					new CardData()
 				}
