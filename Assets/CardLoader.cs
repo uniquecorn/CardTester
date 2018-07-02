@@ -8,6 +8,11 @@ public class CardLoader : MonoBehaviour
 	public Card card;
 	public int loadedIndex = 0;
 	public CardHolder loadedData;
+	public CardLoad cardLoadPrefab;
+
+	public RectTransform cardLoaderContent;
+	public RectTransform addCardButton;
+	private List<CardLoad> cardLoaders;
 	public static CardLoader instance;
 	// Use this for initialization
 	void Start ()
@@ -15,13 +20,32 @@ public class CardLoader : MonoBehaviour
 		instance = this;
 		Screen.SetResolution(720, 720, false);
 		Load();
+		cardLoaders = new List<CardLoad>();
+		CreateCardLoaders();
 		card.Load(loadedData.data[loadedIndex]);
+	}
+	public void CreateCardLoaders()
+	{
+		for(int i = cardLoaders.Count - 1; i >= 0; i--)
+		{
+			Destroy(cardLoaders[i].gameObject);
+		}
+		cardLoaders.Clear();
+		for(int i = 0; i < loadedData.data.Count; i++)
+		{
+			cardLoaders.Add(Instantiate(cardLoadPrefab,cardLoaderContent));
+			cardLoaders[i].Load(i);
+			((RectTransform)cardLoaders[i].transform).anchoredPosition = (Vector2.down * 5) + (Vector2.down * 45 * i);
+			addCardButton.anchoredPosition = (Vector2.down * 5) + (Vector2.down * 45 * (i+1));
+			cardLoaderContent.sizeDelta = new Vector2(cardLoaderContent.sizeDelta.x,5 + ((i+2) * 45));
+		}
 	}
 	public void AddCard()
 	{
 		loadedData.data.Add(new CardData());
 		Save();
 		Load();
+		CreateCardLoaders();
 	}
 	public void Save()
 	{

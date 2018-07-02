@@ -13,13 +13,13 @@ public class Card : CastleObject
 	public ToggleGroup tabs;
 	public Toggle leftTabObj;
 	public Toggle rightTabObj;
-	public List<RectTransform> leftTabToggles;
-	public List<RectTransform> rightTabToggles;
+	public List<RectTransform> backgroundTabs;
+	public List<RectTransform> foregroundTabs;
 	public Image maskImage;
 	public RawImage art;
 	public List<RawImage> backgroundLayers;
 	public List<RawImage> foregroundLayers;
-	public Text nameText;
+	public InputField nameText;
 	public float backgroundScale, foregroundScale;
 	public bool isHeld;
 	public Button addBackground, addForeground;
@@ -235,7 +235,19 @@ public class Card : CastleObject
 
 	public void AddForeground(string path = "")
 	{
-		ArtTab artTab = Instantiate(leftTabObj,leftTabs).GetComponent<ArtTab>();
+		ArtTab artTab = null;
+		if(foregroundTabs != null)
+		{
+			if(foregroundLayers.Count < foregroundTabs.Count)
+			{
+				artTab = foregroundTabs[foregroundLayers.Count].GetComponent<ArtTab>();
+			}
+			else
+			{
+				artTab = Instantiate(leftTabObj,leftTabs).GetComponent<ArtTab>();
+			}
+		}
+		
 		artTab.artIndex = foregroundLayers.Count + 2;
 		artTab.indexText.text = artTab.artIndex.ToString();
 		((RectTransform)artTab.transform).anchoredPosition = Vector2.down * 20 * (foregroundLayers.Count + 1);
