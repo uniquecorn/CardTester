@@ -28,6 +28,7 @@ public class DirectoryViewer : MonoBehaviour
 	{
 		blocker.gameObject.SetActive(true);
 		visible = true;
+		viewerCanvas.blocksRaycasts = true;
 		pickedFile = "";
 		SwitchPath(path);
 		while(string.IsNullOrEmpty(pickedFile))
@@ -44,6 +45,7 @@ public class DirectoryViewer : MonoBehaviour
 		result(pickedFile);
 		blocker.gameObject.SetActive(false);
 		visible = false;
+		viewerCanvas.blocksRaycasts = false;
 	}
 
 	public void UpDir()

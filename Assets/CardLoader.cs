@@ -13,6 +13,7 @@ public class CardLoader : MonoBehaviour
 	public RectTransform cardLoaderContent;
 	public RectTransform addCardButton;
 	private List<CardLoad> cardLoaders;
+	public int loadedCard;
 	public static CardLoader instance;
 	// Use this for initialization
 	void Start ()
@@ -85,11 +86,11 @@ public class CardLoader : MonoBehaviour
 	void Update ()
 	{
 		Castle.CastleManager.CastleUpdate();
-		if(Input.GetKeyDown("r"))
-		{
-			Load();
-			card.Load(loadedData.data[loadedIndex]);
-		}
+		//if(Input.GetKeyDown("r"))
+		//{
+		//	Load();
+		//	card.Load(loadedData.data[loadedIndex]);
+		//}
 		// if(Input.GetAxis("Mouse ScrollWheel") > 0)
 		// {
 		// 	Load();

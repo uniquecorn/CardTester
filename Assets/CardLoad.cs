@@ -16,6 +16,7 @@ public class CardLoad : MonoBehaviour
 
 	public void LoadCard()
 	{
+		CardLoader.instance.loadedCard = pos;
 		CardLoader.instance.card.Load(CardLoader.instance.loadedData.data[pos]);
 	}
 

@@ -20,6 +20,15 @@ public class CastleTools : MonoBehaviour
 		return Instantiate(RandomObject(assets), Vector3.zero, Quaternion.identity);
 	}
 
+	public static Color Clear(Color _color)
+	{
+		return new Color(_color.r, _color.g, _color.b, 0);
+	}
+	public static Color Full(Color _color)
+	{
+		return new Color(_color.r, _color.g, _color.b, 1);
+	}
+
 	public static Texture2D LoadImage(string fileName)
 	{
 		fileName = fileName.Replace('\\','/');
