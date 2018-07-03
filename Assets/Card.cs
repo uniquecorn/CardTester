@@ -29,6 +29,7 @@ public class Card : CastleObject
 	public Button uploadArt;
 	public Slider foregroundSlider, backgroundSlider;
 	public Text foregroundSliderText, backgroundSliderText;
+	public Texture missingTexture;
 
 	public int artIndex = -1;
 
@@ -73,10 +74,16 @@ public class Card : CastleObject
 			}
 			art.transform.position = artBacking.transform.position;
 		}
+		else
+		{
+			art.texture = missingTexture;
+			art.SetNativeSize();
+			art.rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
+		}
 		backgroundSlider.value = backgroundScale;
 		foregroundSlider.value = foregroundScale;
-		AdjustBackground(backgroundScale);
-		AdjustForeground(foregroundScale);
+		backgroundSliderText.text = backgroundScale.ToString();
+		foregroundSliderText.text = foregroundScale.ToString();
 		SelectTab();
 		CreateTabs();
 		ApplyMask();
@@ -212,6 +219,8 @@ public class Card : CastleObject
 				AddForeground(data.foregroundLayers[i].imageDir);
 			}
 		}
+		((RectTransform)addBackground.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 1);
+		((RectTransform)addForeground.transform).anchoredPosition = Vector2.right * 52 * (foregroundLayers.Count + 1);
 	}
 
 	public void SelectTab()
@@ -309,13 +318,16 @@ public class Card : CastleObject
 		
 		artTab.artIndex = foregroundLayers.Count + 2;
 		artTab.indexText.text = (artTab.artIndex - 1).ToString();
-		((RectTransform)artTab.transform).anchoredPosition = Vector2.right * 22 * (foregroundLayers.Count + 1);
-		((RectTransform)addForeground.transform).anchoredPosition = Vector2.right * 22 * (foregroundLayers.Count + 2);
+		((RectTransform)artTab.transform).anchoredPosition = Vector2.right * 52 * (foregroundLayers.Count + 1);
+		((RectTransform)addForeground.transform).anchoredPosition = Vector2.right * 52 * (foregroundLayers.Count + 2);
 		foregroundLayers.Add(Instantiate(art, maskImage.rectTransform));
 		foregroundLayers[foregroundLayers.Count - 1].rectTransform.SetAsLastSibling();
 		if (string.IsNullOrEmpty(path))
 		{
 			data.foregroundLayers.Add(new CardArt());
+			foregroundLayers[foregroundLayers.Count - 1].texture = missingTexture;
+			foregroundLayers[foregroundLayers.Count - 1].SetNativeSize();
+			foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
 		}
 		else
 		{
@@ -356,13 +368,16 @@ public class Card : CastleObject
 		}
 		artTab.artIndex = -backgroundLayers.Count - 1;
 		artTab.indexText.text = artTab.artIndex.ToString();
-		((RectTransform)artTab.transform).anchoredPosition = Vector2.left * 22 * (backgroundLayers.Count + 1);
-		((RectTransform)addBackground.transform).anchoredPosition = Vector2.left * 22 * (backgroundLayers.Count + 2);
+		((RectTransform)artTab.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 1);
+		((RectTransform)addBackground.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 2);
 		backgroundLayers.Add(Instantiate(art,maskImage.rectTransform));
 		backgroundLayers[backgroundLayers.Count - 1].rectTransform.SetAsFirstSibling();
 		if (string.IsNullOrEmpty(path))
 		{
 			data.backgroundLayers.Add(new CardArt());
+			backgroundLayers[backgroundLayers.Count - 1].texture = missingTexture;
+			backgroundLayers[backgroundLayers.Count - 1].SetNativeSize();
+			backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta = backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta / 2;
 		}
 		else
 		{
@@ -424,6 +439,7 @@ public class Card : CastleObject
 
 	public void AdjustForeground(float _val)
 	{
+		_val = Mathf.Round(_val * 100f) / 100f;
 		data.foregroundScale = _val;
 		foregroundScale = _val;
 		foregroundSliderText.text = _val.ToString();
@@ -432,6 +448,7 @@ public class Card : CastleObject
 
 	public void AdjustBackground(float _val)
 	{
+		_val = Mathf.Round(_val * 100f) / 100f;
 		data.backgroundScale = _val;
 		backgroundScale = _val;
 		backgroundSliderText.text = _val.ToString();
@@ -442,6 +459,7 @@ public class Card : CastleObject
 	{
 		data.name = _name;
 		Save();
+		CardLoader.instance.cardLoaders[CardLoader.instance.loadedCard].Load(CardLoader.instance.loadedCard);
 	}
 
 	public override void Tap()

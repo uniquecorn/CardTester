@@ -14,6 +14,12 @@ public class CardLoad : MonoBehaviour
 		textObj.text = CardLoader.instance.loadedData.data[pos].name;
 	}
 
+	public void Delete()
+	{
+		CardLoader.instance.loadedData.data.RemoveAt(pos);
+		CardLoader.instance.ResetLoaders();
+	}
+
 	public void LoadCard()
 	{
 		CardLoader.instance.loadedCard = pos;

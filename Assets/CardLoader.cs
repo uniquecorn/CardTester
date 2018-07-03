@@ -6,13 +6,12 @@ using UnityEngine;
 public class CardLoader : MonoBehaviour
 {
 	public Card card;
-	public int loadedIndex = 0;
 	public CardHolder loadedData;
 	public CardLoad cardLoadPrefab;
 
 	public RectTransform cardLoaderContent;
 	public RectTransform addCardButton;
-	private List<CardLoad> cardLoaders;
+	public List<CardLoad> cardLoaders;
 	public int loadedCard;
 	public static CardLoader instance;
 	// Use this for initialization
@@ -23,7 +22,7 @@ public class CardLoader : MonoBehaviour
 		Load();
 		cardLoaders = new List<CardLoad>();
 		CreateCardLoaders();
-		card.Load(loadedData.data[loadedIndex]);
+		card.Load(loadedData.data[loadedCard]);
 	}
 	public void CreateCardLoaders()
 	{
@@ -44,6 +43,10 @@ public class CardLoader : MonoBehaviour
 	public void AddCard()
 	{
 		loadedData.data.Add(new CardData());
+		ResetLoaders();
+	}
+	public void ResetLoaders()
+	{
 		Save();
 		Load();
 		CreateCardLoaders();
