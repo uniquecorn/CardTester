@@ -16,8 +16,17 @@ public class CardLoad : MonoBehaviour
 
 	public void Delete()
 	{
-		CardLoader.instance.loadedData.data.RemoveAt(pos);
-		CardLoader.instance.ResetLoaders();
+		StartCoroutine(DeleteDelay());
+	}
+	public IEnumerator DeleteDelay()
+	{
+		bool check = false;
+		yield return StartCoroutine(ConfirmPrompt.instance.RunPrompt(result => check = result));
+		if(check)
+		{
+			CardLoader.instance.loadedData.data.RemoveAt(pos);
+			CardLoader.instance.ResetLoaders();
+		}
 	}
 
 	public void LoadCard()

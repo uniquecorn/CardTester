@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Castle;
 using System.IO;
+using System.Linq;
 
 public class Card : CastleObject
 {
@@ -13,32 +14,28 @@ public class Card : CastleObject
 	public RectTransform rightTabs;
 	public ToggleGroup tabs;
 	public Toggle leftTabObj;
-	public Toggle rightTabObj;
 	public List<RectTransform> backgroundTabs;
 	public List<RectTransform> foregroundTabs;
 	public Image maskImage;
-	public RawImage art;
-	public List<RawImage> backgroundLayers;
-	public List<RawImage> foregroundLayers;
+	public ArtLayer art;
+	public List<ArtLayer> backgroundLayers;
+	public List<ArtLayer> foregroundLayers;
 	public InputField nameText;
 	public float backgroundScale, foregroundScale;
 	public bool isHeld;
 	public Button addBackground, addForeground;
 	public Toggle maskL, maskR, maskT, maskB, maskedToggle;
 
-	public Button uploadArt;
+	public Button uploadArt, uploadLight;
 	public Slider foregroundSlider, backgroundSlider;
 	public Text foregroundSliderText, backgroundSliderText;
 	public Texture missingTexture;
-
-	public int artIndex = -1;
 
 	public DirectoryViewer dirViewer;
 	// Use this for initialization
 	public void Load (CardData _data)
 	{
 		tabs.SetAllTogglesOff();
-		artIndex = 0;
 		data = _data;
 		nameText.text = _data.name;
 		if(backgroundLayers != null)
@@ -59,27 +56,7 @@ public class Card : CastleObject
 		}
 		backgroundScale = _data.backgroundScale;
 		foregroundScale = _data.foregroundScale;
-		if (_data.mainArt.imageDir != "" && !string.IsNullOrEmpty(_data.mainArt.imageDir))
-		{
-			art.texture = CastleTools.LoadImage(Path.Combine(CardLoader.GetSavePath(""), _data.mainArt.imageDir));
-			art.SetNativeSize();
-			art.rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
-			if (!_data.mainArt.masked)
-			{
-				art.maskable = false;
-			}
-			else
-			{
-				art.maskable = true;
-			}
-			art.transform.position = artBacking.transform.position;
-		}
-		else
-		{
-			art.texture = missingTexture;
-			art.SetNativeSize();
-			art.rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
-		}
+		art.LoadArt(_data.mainArt);
 		backgroundSlider.value = backgroundScale;
 		foregroundSlider.value = foregroundScale;
 		backgroundSliderText.text = backgroundScale.ToString();
@@ -97,22 +74,38 @@ public class Card : CastleObject
 
 	public void MaskGraphic(bool isOn)
 	{
-		if(artIndex == 1)
+		if(tabs.AnyTogglesOn())
 		{
-			art.maskable = isOn;
-			data.mainArt.masked = isOn;
+			ArtTab currTab = tabs.ActiveToggles().First().GetComponent<ArtTab>();
+			currTab.artLayer.ApplyMask(isOn);
+			if (currTab.artLayer == art)
+			{
+				data.mainArt.masked = isOn;
+				Save();
+				return;
+			}
+			else
+			{
+				for(int i = 0; i < foregroundLayers.Count; i++)
+				{
+					if(currTab.artLayer == foregroundLayers[i])
+					{
+						data.foregroundLayers[i].masked = isOn;
+						Save();
+						return;
+					}
+				}
+				for (int i = 0; i < backgroundLayers.Count; i++)
+				{
+					if (currTab.artLayer == backgroundLayers[i])
+					{
+						data.backgroundLayers[i].masked = isOn;
+						Save();
+						return;
+					}
+				}
+			}
 		}
-		else if(artIndex < 0)
-		{
-			backgroundLayers[Mathf.Abs(artIndex) - 1].maskable = isOn;
-			data.backgroundLayers[Mathf.Abs(artIndex) - 1].masked = isOn;
-		}
-		else if (artIndex > 0)
-		{
-			foregroundLayers[artIndex - 2].maskable = isOn;
-			data.foregroundLayers[artIndex - 2].masked = isOn;
-		}
-		Save();
 	}
 
 	public void MaskTop(bool isOn)
@@ -142,10 +135,10 @@ public class Card : CastleObject
 
 	public void ApplyMask()
 	{
-		float offsetX = art.rectTransform.sizeDelta.x - 96;
-		float offsetY = art.rectTransform.sizeDelta.y - 126;
-		float maskWidth = art.rectTransform.sizeDelta.x;
-		float maskHeight = art.rectTransform.sizeDelta.y;
+		float offsetX = art.RTransform.sizeDelta.x - 96;
+		float offsetY = art.RTransform.sizeDelta.y - 126;
+		float maskWidth = art.RTransform.sizeDelta.x;
+		float maskHeight = art.RTransform.sizeDelta.y;
 		float maskOffsetX = 0;
 		float maskOffsetY = 0;
 
@@ -205,18 +198,18 @@ public class Card : CastleObject
 		}
 		if (data.backgroundLayers != null)
 		{
-			backgroundLayers = new List<RawImage>();
+			backgroundLayers = new List<ArtLayer>();
 			for(int i = 0; i < data.backgroundLayers.Count; i++)
 			{
-				AddBackground(data.backgroundLayers[i].imageDir);
+				AddBackground();
 			}
 		}
 		if(data.foregroundLayers != null)
 		{
-			foregroundLayers = new List<RawImage>();
+			foregroundLayers = new List<ArtLayer>();
 			for(int i = 0; i < data.foregroundLayers.Count; i++)
 			{
-				AddForeground(data.foregroundLayers[i].imageDir);
+				AddForeground();
 			}
 		}
 		((RectTransform)addBackground.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 1);
@@ -225,21 +218,22 @@ public class Card : CastleObject
 
 	public void SelectTab()
 	{
-		if(artIndex == 0)
+		if (!tabs.AnyTogglesOn())
 		{
-			for(int i = 0; i < backgroundLayers.Count; i++)
+			for (int i = 0; i < backgroundLayers.Count; i++)
 			{
 				backgroundLayers[i].gameObject.SetActive(true);
 			}
-			for(int i = 0; i < foregroundLayers.Count; i++)
+			for (int i = 0; i < foregroundLayers.Count; i++)
 			{
 				foregroundLayers[i].gameObject.SetActive(true);
 			}
 			art.gameObject.SetActive(true);
 			uploadArt.gameObject.SetActive(false);
+			uploadLight.gameObject.SetActive(false);
 			return;
 		}
-		else if(artIndex == 1)
+		else
 		{
 			for (int i = 0; i < backgroundLayers.Count; i++)
 			{
@@ -249,53 +243,17 @@ public class Card : CastleObject
 			{
 				foregroundLayers[i].gameObject.SetActive(false);
 			}
-			art.gameObject.SetActive(true);
-			maskedToggle.isOn = data.mainArt.masked;
-		}
-		else if(artIndex > 1)
-		{
-			for (int i = 0; i < backgroundLayers.Count; i++)
-			{
-				backgroundLayers[i].gameObject.SetActive(false);
-			}
-			for (int i = 0; i < foregroundLayers.Count; i++)
-			{
-				if(i == (artIndex - 2))
-				{
-					foregroundLayers[i].gameObject.SetActive(true);
-					maskedToggle.isOn = data.foregroundLayers[i].masked;
-				}
-				else
-				{
-					foregroundLayers[i].gameObject.SetActive(false);
-				}
-			}
 			art.gameObject.SetActive(false);
+
+			ArtTab currTab = tabs.ActiveToggles().First().GetComponent<ArtTab>();
+			currTab.artLayer.gameObject.SetActive(true);
+			maskedToggle.isOn = currTab.artLayer.art.maskable;
+			uploadArt.gameObject.SetActive(true);
+			uploadLight.gameObject.SetActive(true);
 		}
-		else if(artIndex < 0)
-		{
-			for (int i = 0; i < backgroundLayers.Count; i++)
-			{
-				if (i == (Mathf.Abs(artIndex) - 1))
-				{
-					backgroundLayers[i].gameObject.SetActive(true);
-					maskedToggle.isOn = data.backgroundLayers[i].masked;
-				}
-				else
-				{
-					backgroundLayers[i].gameObject.SetActive(false);
-				}
-			}
-			for (int i = 0; i < foregroundLayers.Count; i++)
-			{
-				foregroundLayers[i].gameObject.SetActive(false);
-			}
-			art.gameObject.SetActive(false);
-		}
-		uploadArt.gameObject.SetActive(true);
 	}
 
-	public void AddForeground(string path = "")
+	public void AddForeground(bool newLayer = false)
 	{
 		ArtTab artTab = null;
 		if(foregroundTabs != null)
@@ -316,37 +274,24 @@ public class Card : CastleObject
 			foregroundTabs = new List<RectTransform>();
 		}
 		
-		artTab.artIndex = foregroundLayers.Count + 2;
-		artTab.indexText.text = (artTab.artIndex - 1).ToString();
+		artTab.indexText.text = (foregroundLayers.Count + 1).ToString();
 		((RectTransform)artTab.transform).anchoredPosition = Vector2.right * 52 * (foregroundLayers.Count + 1);
 		((RectTransform)addForeground.transform).anchoredPosition = Vector2.right * 52 * (foregroundLayers.Count + 2);
 		foregroundLayers.Add(Instantiate(art, maskImage.rectTransform));
-		foregroundLayers[foregroundLayers.Count - 1].rectTransform.SetAsLastSibling();
-		if (string.IsNullOrEmpty(path))
+		foregroundLayers[foregroundLayers.Count - 1].RTransform.SetAsLastSibling();
+		artTab.artLayer = foregroundLayers[foregroundLayers.Count - 1];
+		if (newLayer)
 		{
 			data.foregroundLayers.Add(new CardArt());
-			foregroundLayers[foregroundLayers.Count - 1].texture = missingTexture;
-			foregroundLayers[foregroundLayers.Count - 1].SetNativeSize();
-			foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
+			foregroundLayers[foregroundLayers.Count - 1].LoadArt(data.foregroundLayers[foregroundLayers.Count - 1]);
 		}
 		else
 		{
-			if (!data.foregroundLayers[foregroundLayers.Count - 1].masked)
-			{
-				foregroundLayers[foregroundLayers.Count - 1].maskable = false;
-			}
-			else
-			{
-				foregroundLayers[foregroundLayers.Count - 1].maskable = true;
-			}
-			foregroundLayers[foregroundLayers.Count - 1].texture = CastleTools.LoadImage(Path.Combine(CardLoader.GetSavePath(""), data.foregroundLayers[foregroundLayers.Count - 1].imageDir));
-			foregroundLayers[foregroundLayers.Count - 1].SetNativeSize();
-			foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta = foregroundLayers[foregroundLayers.Count - 1].rectTransform.sizeDelta / 2;
-			foregroundLayers[foregroundLayers.Count - 1].transform.position = artBacking.transform.position;
+			foregroundLayers[foregroundLayers.Count - 1].LoadArt(data.foregroundLayers[foregroundLayers.Count - 1]);
 		}
 	}
 
-	public void AddBackground(string path = "")
+	public void AddBackground(bool newLayer = false)
 	{
 		ArtTab artTab = null;
 		if (foregroundTabs != null)
@@ -366,33 +311,20 @@ public class Card : CastleObject
 		{
 			backgroundTabs = new List<RectTransform>();
 		}
-		artTab.artIndex = -backgroundLayers.Count - 1;
-		artTab.indexText.text = artTab.artIndex.ToString();
+		artTab.indexText.text = (-backgroundLayers.Count - 1).ToString();
 		((RectTransform)artTab.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 1);
 		((RectTransform)addBackground.transform).anchoredPosition = Vector2.left * 52 * (backgroundLayers.Count + 2);
 		backgroundLayers.Add(Instantiate(art,maskImage.rectTransform));
-		backgroundLayers[backgroundLayers.Count - 1].rectTransform.SetAsFirstSibling();
-		if (string.IsNullOrEmpty(path))
+		backgroundLayers[backgroundLayers.Count - 1].RTransform.SetAsFirstSibling();
+		artTab.artLayer = backgroundLayers[backgroundLayers.Count - 1];
+		if (newLayer)
 		{
 			data.backgroundLayers.Add(new CardArt());
-			backgroundLayers[backgroundLayers.Count - 1].texture = missingTexture;
-			backgroundLayers[backgroundLayers.Count - 1].SetNativeSize();
-			backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta = backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta / 2;
+			backgroundLayers[backgroundLayers.Count - 1].LoadArt(data.backgroundLayers[backgroundLayers.Count - 1]);
 		}
 		else
 		{
-			if (!data.backgroundLayers[backgroundLayers.Count - 1].masked)
-			{
-				backgroundLayers[backgroundLayers.Count - 1].maskable = false;
-			}
-			else
-			{
-				backgroundLayers[backgroundLayers.Count - 1].maskable = true;
-			}
-			backgroundLayers[backgroundLayers.Count - 1].texture = CastleTools.LoadImage(Path.Combine(CardLoader.GetSavePath(""), data.backgroundLayers[backgroundLayers.Count - 1].imageDir));
-			backgroundLayers[backgroundLayers.Count - 1].SetNativeSize();
-			backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta = backgroundLayers[backgroundLayers.Count - 1].rectTransform.sizeDelta / 2;
-			backgroundLayers[backgroundLayers.Count - 1].transform.position = artBacking.transform.position;
+			backgroundLayers[backgroundLayers.Count - 1].LoadArt(data.backgroundLayers[backgroundLayers.Count - 1]);
 		}
 	}
 
@@ -400,33 +332,65 @@ public class Card : CastleObject
 	{
 		StartCoroutine(LoadArt());
 	}
+	public void LoadNewLight()
+	{
+		StartCoroutine(LoadArt(true));
+	}
 
-	public IEnumerator LoadArt()
+	public IEnumerator LoadArt(bool light = false)
 	{
 		coll.enabled = false;
 		string loadedArtPath = "";
 		yield return dirViewer.StartCoroutine(dirViewer.SearchForFile(CardLoader.GetSavePath(""), result => loadedArtPath =result));
-		print(SanitizePath(loadedArtPath));
-		if (artIndex == 1)
+		if(!string.IsNullOrEmpty(loadedArtPath))
 		{
-			art.texture = CastleTools.LoadImage(loadedArtPath);
-			art.SetNativeSize();
-			art.rectTransform.sizeDelta = art.rectTransform.sizeDelta / 2;
-			data.mainArt.imageDir = SanitizePath(loadedArtPath);
-		}
-		else if (artIndex < 0)
-		{
-			backgroundLayers[Mathf.Abs(artIndex) - 1].texture = CastleTools.LoadImage(loadedArtPath);
-			backgroundLayers[Mathf.Abs(artIndex) - 1].SetNativeSize();
-			backgroundLayers[Mathf.Abs(artIndex) - 1].rectTransform.sizeDelta = backgroundLayers[Mathf.Abs(artIndex) - 1].rectTransform.sizeDelta / 2;
-			data.backgroundLayers[Mathf.Abs(artIndex) - 1].imageDir = SanitizePath(loadedArtPath);
-		}
-		else if (artIndex > 0)
-		{
-			foregroundLayers[artIndex - 2].texture = CastleTools.LoadImage(loadedArtPath);
-			foregroundLayers[artIndex - 2].SetNativeSize();
-			foregroundLayers[artIndex - 2].rectTransform.sizeDelta = foregroundLayers[artIndex - 2].rectTransform.sizeDelta / 2;
-			data.foregroundLayers[artIndex - 2].imageDir = SanitizePath(loadedArtPath);
+			loadedArtPath = SanitizePath(loadedArtPath);
+			ArtTab currTab = tabs.ActiveToggles().First().GetComponent<ArtTab>();
+			if (currTab.artLayer == art)
+			{
+				if (light)
+				{
+					data.mainArt.lightingDir = loadedArtPath;
+				}
+				else
+				{
+					data.mainArt.imageDir = loadedArtPath;
+				}
+				currTab.artLayer.LoadArt(data.mainArt);
+			}
+			else
+			{
+				for (int i = 0; i < foregroundLayers.Count; i++)
+				{
+					if (currTab.artLayer == foregroundLayers[i])
+					{
+						if (light)
+						{
+							data.foregroundLayers[i].lightingDir = loadedArtPath;
+						}
+						else
+						{
+							data.foregroundLayers[i].imageDir = loadedArtPath;
+						}
+						currTab.artLayer.LoadArt(data.foregroundLayers[i]);
+					}
+				}
+				for (int i = 0; i < backgroundLayers.Count; i++)
+				{
+					if (currTab.artLayer == backgroundLayers[i])
+					{
+						if (light)
+						{
+							data.backgroundLayers[i].lightingDir = loadedArtPath;
+						}
+						else
+						{
+							data.backgroundLayers[i].imageDir = loadedArtPath;
+						}
+						currTab.artLayer.LoadArt(data.backgroundLayers[i]);
+					}
+				}
+			}
 		}
 		coll.enabled = true;
 		Save();
@@ -475,12 +439,16 @@ public class Card : CastleObject
 	// Update is called once per frame
 	void Update()
 	{
-		if (artIndex == 0)
+		if (!tabs.AnyTogglesOn())
 		{
 			rightTabs.anchoredPosition = Vector2.Lerp(rightTabs.anchoredPosition, Vector2.left * 30, Time.deltaTime * 15);
 		}
 		else
 		{
+			if (Input.GetKeyDown(KeyCode.Escape) && !dirViewer.visible)
+			{
+				tabs.SetAllTogglesOff();
+			}
 			rightTabs.anchoredPosition = Vector2.Lerp(rightTabs.anchoredPosition, Vector2.left * 8, Time.deltaTime * 15);
 		}
 		if (isHeld)

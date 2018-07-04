@@ -27,20 +27,14 @@ public class DirectoryViewer : MonoBehaviour
 	public IEnumerator SearchForFile(string path, System.Action<string> result)
 	{
 		blocker.gameObject.SetActive(true);
+		cancel = false;
 		visible = true;
 		viewerCanvas.blocksRaycasts = true;
 		pickedFile = "";
 		SwitchPath(path);
-		while(string.IsNullOrEmpty(pickedFile))
+		while(string.IsNullOrEmpty(pickedFile) && !cancel)
 		{
-			if(cancel)
-			{
-				yield break;
-			}
-			else
-			{
-				yield return null;
-			}
+			yield return null;
 		}
 		result(pickedFile);
 		blocker.gameObject.SetActive(false);
@@ -51,6 +45,11 @@ public class DirectoryViewer : MonoBehaviour
 	public void UpDir()
 	{
 		SwitchPath(currentPath.Parent.FullName);
+	}
+
+	public void Cancel()
+	{
+		cancel = true;
 	}
 
 	public void SwitchPath(string path)
@@ -108,6 +107,7 @@ public class DirectoryViewer : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
 	{
+		
 		if(visible)
 		{
 			viewerTransform.anchoredPosition = Vector2.Lerp(viewerTransform.anchoredPosition, Vector2.up * 5, Time.deltaTime * 10);
